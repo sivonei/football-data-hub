@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Data Hub</title>
+
+    <!-- Bootstrap via CDN - no installation required -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .league-header {
+            background-color: #212529;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .section-header {
+            background-color: #343a40;
+            color: #adb5bd;
+            padding: 6px 20px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .table-container {
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #dc3545;
+        }
+
+        .badge-result {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container py-5">
+
+        <!-- Page header -->
+        <div class="text-center mb-5">
+            <h1 class="fw-bold">Football Data Hub</h1>
+            <p class="text-muted">Live standings and matches from La Liga and Premier League</p>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- La Liga -->
+            <div class="col-12 col-lg-6">
+                <div class="league-header">
+                    <h5 class="mb-0">🇪🇸 La Liga</h5>
+                </div>
+                <div class="table-container bg-white">
+
+                    <!-- Standings -->
+                    <div class="section-header">Standings</div>
+                    <div id="espanha-loading" class="loading">Loading...</div>
+                    <div id="espanha-error" class="error" style="display:none;">Failed to load standings.</div>
+                    <table class="table table-hover table-striped mb-0" id="espanha-table" style="display:none;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Team</th>
+                                <th>P</th>
+                                <th>W</th>
+                                <th>D</th>
+                                <th>L</th>
+                                <th>Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody id="espanha-body"></tbody>
+                    </table>
+
+                    <!-- Matches -->
+                    <div class="section-header mt-0">Matches</div>
+                    <div id="espanha-matches-loading" class="loading">Loading...</div>
+                    <div id="espanha-matches-error" class="error" style="display:none;">Failed to load matches.</div>
+                    <table class="table table-hover mb-0" id="espanha-matches-table" style="display:none;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Date</th>
+                                <th>Home</th>
+                                <th>Score</th>
+                                <th>Away</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="espanha-matches-body"></tbody>
+                    </table>
+
+                </div>
+            </div>
+
+            <!-- Premier League -->
+            <div class="col-12 col-lg-6">
+                <div class="league-header">
+                    <h5 class="mb-0">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</h5>
+                </div>
+                <div class="table-container bg-white">
+
+                    <!-- Standings -->
+                    <div class="section-header">Standings</div>
+                    <div id="uk-loading" class="loading">Loading...</div>
+                    <div id="uk-error" class="error" style="display:none;">Failed to load standings.</div>
+                    <table class="table table-hover table-striped mb-0" id="uk-table" style="display:none;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Team</th>
+                                <th>P</th>
+                                <th>W</th>
+                                <th>D</th>
+                                <th>L</th>
+                                <th>Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody id="uk-body"></tbody>
+                    </table>
+
+                    <!-- Matches -->
+                    <div class="section-header">Matches</div>
+                    <div id="uk-matches-loading" class="loading">Loading...</div>
+                    <div id="uk-matches-error" class="error" style="display:none;">Failed to load matches.</div>
+                    <table class="table table-hover mb-0" id="uk-matches-table" style="display:none;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Date</th>
+                                <th>Home</th>
+                                <th>Score</th>
+                                <th>Away</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="uk-matches-body"></tbody>
+                    </table>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+
+        // Format date to DD/MM/YYYY
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            return d.toLocaleDateString("en-GB");
+        }
+
+        // Return a Bootstrap badge based on match status
+        function statusBadge(status) {
+            const map = {
+                "FINISHED": ["success", "Finished"],
+                "IN_PLAY": ["danger", "Live"],
+                "PAUSED": ["warning", "Paused"],
+                "SCHEDULED": ["secondary", "Scheduled"],
+                "POSTPONED": ["dark", "Postponed"],
+                "CANCELLED": ["dark", "Cancelled"],
+            };
+            const [color, label] = map[status] || ["secondary", status];
+            return `<span class="badge bg-${color} badge-result">${label}</span>`;
+        }
+
+        // Load standings table
+        async function loadStandings(league, bodyId, tableId, loadingId, errorId) {
+            try {
+                const response = await fetch(`${API_URL}/liga-${league}/tabela`);
+                if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+
+                const data = await response.json();
+                const table = data.standings[0].table;
+                const tbody = document.getElementById(bodyId);
+
+                table.forEach(entry => {
+                    tbody.innerHTML += `
+                    <tr>
+                        <td>${entry.position}</td>
+                        <td>
+                            <img src="${entry.team.crest}" width="20" class="me-2">
+                            ${entry.team.shortName}
+                        </td>
+                        <td>${entry.playedGames}</td>
+                        <td>${entry.won}</td>
+                        <td>${entry.draw}</td>
+                        <td>${entry.lost}</td>
+                        <td><strong>${entry.points}</strong></td>
+                    </tr>
+                `;
+                });
+
+                document.getElementById(loadingId).style.display = "none";
+                document.getElementById(tableId).style.display = "table";
+
+            } catch (error) {
+                document.getElementById(loadingId).style.display = "none";
+                document.getElementById(errorId).style.display = "block";
+                console.error(`Error loading ${league} standings:`, error);
+            }
+        }
+
+        // Load matches table
+        async function loadMatches(league, bodyId, tableId, loadingId, errorId) {
+            try {
+                const response = await fetch(`${API_URL}/liga-${league}/jogos`);
+                if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+
+                const data = await response.json();
+                const matches = data.matches;
+                const tbody = document.getElementById(bodyId);
+
+                // Show only the last 5 and next 5 matches
+                const recent = matches.filter(m => m.status === "FINISHED").slice(-5);
+                const upcoming = matches.filter(m => m.status === "SCHEDULED").slice(0, 5);
+                const display = [...recent, ...upcoming];
+
+                display.forEach(match => {
+                    const home = match.homeTeam.shortName;
+                    const away = match.awayTeam.shortName;
+                    const score = match.score.fullTime.home !== null
+                        ? `${match.score.fullTime.home} - ${match.score.fullTime.away}`
+                        : "-";
+
+                    tbody.innerHTML += `
+                    <tr>
+                        <td>${formatDate(match.utcDate)}</td>
+                        <td>${home}</td>
+                        <td class="text-center"><strong>${score}</strong></td>
+                        <td>${away}</td>
+                        <td>${statusBadge(match.status)}</td>
+                    </tr>
+                `;
+                });
+
+                document.getElementById(loadingId).style.display = "none";
+                document.getElementById(tableId).style.display = "table";
+
+            } catch (error) {
+                document.getElementById(loadingId).style.display = "none";
+                document.getElementById(errorId).style.display = "block";
+                console.error(`Error loading ${league} matches:`, error);
+            }
+        }
+
+        // Load all data on page open
+        loadStandings("espanha", "espanha-body", "espanha-table", "espanha-loading", "espanha-error");
+        loadStandings("uk", "uk-body", "uk-table", "uk-loading", "uk-error");
+        loadMatches("espanha", "espanha-matches-body", "espanha-matches-table", "espanha-matches-loading", "espanha-matches-error");
+        loadMatches("uk", "uk-matches-body", "uk-matches-table", "uk-matches-loading", "uk-matches-error");
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>

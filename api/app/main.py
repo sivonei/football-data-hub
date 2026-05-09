@@ -3,6 +3,7 @@
 
 # Load environment variables from .env file
 # This only applies in development, in production variables are set directly on the VM
+from fastapi.middleware.cors import CORSMiddleware
 from app.routes import espanha, uk
 from fastapi import FastAPI
 from dotenv import load_dotenv
@@ -16,6 +17,15 @@ app = FastAPI(
     description="API that provides real-time football data from Spain and UK leagues",
     version="1.0.0"
 )
+
+# Allow the frontend to call the API from the browser
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
 
 # Register the routes
 # Each router groups related endpoints under a specific prefix
