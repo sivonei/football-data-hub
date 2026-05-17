@@ -2,11 +2,9 @@
 # This file configures the Terraform provider and connects to Azure
 
 terraform {
-  # Minimum Terraform version required
   required_version = ">= 1.5.0"
 
   required_providers {
-    # Azure provider - allows Terraform to manage Azure resources
     azurerm = {
       source  = "hashicorp/azurerm"
       version = "~> 3.100"
@@ -15,7 +13,7 @@ terraform {
 }
 
 # Configure the Azure provider
-# Terraform reads credentials from the Azure CLI login we did earlier
+# Terraform reads credentials from the Azure CLI login
 provider "azurerm" {
   features {}
 }
@@ -33,4 +31,17 @@ module "network" {
   project_name        = var.project_name
   location            = var.location
   resource_group_name = azurerm_resource_group.main.name
+}
+
+# Compute module - creates 3 VMs with static public IPs
+module "compute" {
+  source = "./modules/compute"
+
+  project_name        = var.project_name
+  location            = var.location
+  resource_group_name = azurerm_resource_group.main.name
+  subnet_id           = module.network.subnet_id
+  vm_size             = var.vm_size
+  admin_username      = var.admin_username
+  ssh_public_key_path = var.ssh_public_key_path
 }
