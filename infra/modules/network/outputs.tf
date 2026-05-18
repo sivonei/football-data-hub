@@ -1,14 +1,22 @@
 # outputs.tf - Values exported by the network module
-# These values are used by the compute module to place VMs in the correct network
+# Used by the compute module to place VMs in the correct subnets
 
-# Subnet ID - needed to attach VMs to the correct subnet
-output "subnet_id" {
-  description = "ID of the subnet where VMs will be placed"
-  value       = azurerm_subnet.main.id
+output "subnet_app_id" {
+  description = "ID of subnet-app where VM-1 and VM-2 will be placed"
+  value       = azurerm_subnet.app.id
 }
 
-# NSG ID - needed to associate VMs with the security group
+output "subnet_monitoring_id" {
+  description = "ID of subnet-monitoring where VM-3 will be placed"
+  value       = azurerm_subnet.monitoring.id
+}
+
 output "nsg_id" {
   description = "ID of the network security group"
   value       = azurerm_network_security_group.main.id
+}
+
+output "bastion_public_ip" {
+  description = "Public IP of the Azure Bastion Host"
+  value       = azurerm_public_ip.bastion.ip_address
 }

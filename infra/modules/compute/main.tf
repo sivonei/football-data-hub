@@ -1,18 +1,9 @@
 # main.tf - Compute resources for the Football Data Hub
-# Creates: 3 VMs with static public IPs and network interfaces
+# Creates: 3 VMs without public IPs, access only via Azure Bastion
 
-# ─── VM-1: API + Redis primary ───────────────────────────────────────────────
+# ─── VM-1: API + Redis primary (subnet-app) ──────────────────────────────────
 
-# Public IP for VM-1 - static so it doesn't change when VM is stopped
-resource "azurerm_public_ip" "vm1" {
-  name                = "${var.project_name}-vm1-ip"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  allocation_method   = "Static"
-  sku                 = "Standard"
-}
-
-# Network interface for VM-1 - connects the VM to the subnet
+# Network interface for VM-1 - no public IP, private only
 resource "azurerm_network_interface" "vm1" {
   name                = "${var.project_name}-vm1-nic"
   location            = var.location
@@ -20,9 +11,9 @@ resource "azurerm_network_interface" "vm1" {
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = var.subnet_id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.vm1.id
+    subnet_id                     = var.subnet_app_id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.1.4"
   }
 }
 
@@ -36,7 +27,7 @@ resource "azurerm_linux_virtual_machine" "vm1" {
 
   network_interface_ids = [azurerm_network_interface.vm1.id]
 
-  # SSH key authentication - more secure than password
+  # SSH key authentication
   admin_ssh_key {
     username   = var.admin_username
     public_key = file(var.ssh_public_key_path)
@@ -47,7 +38,7 @@ resource "azurerm_linux_virtual_machine" "vm1" {
     storage_account_type = "Standard_LRS"
   }
 
-  # Ubuntu 22.04 LTS - stable and widely supported
+  # Ubuntu 22.04 LTS
   source_image_reference {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-jammy"
@@ -56,15 +47,7 @@ resource "azurerm_linux_virtual_machine" "vm1" {
   }
 }
 
-# ─── VM-2: API + Redis replica ────────────────────────────────────────────────
-
-resource "azurerm_public_ip" "vm2" {
-  name                = "${var.project_name}-vm2-ip"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  allocation_method   = "Static"
-  sku                 = "Standard"
-}
+# ─── VM-2: API + Redis replica (subnet-app) ───────────────────────────────────
 
 resource "azurerm_network_interface" "vm2" {
   name                = "${var.project_name}-vm2-nic"
@@ -73,9 +56,9 @@ resource "azurerm_network_interface" "vm2" {
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = var.subnet_id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.vm2.id
+    subnet_id                     = var.subnet_app_id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.1.5"
   }
 }
 
@@ -106,15 +89,7 @@ resource "azurerm_linux_virtual_machine" "vm2" {
   }
 }
 
-# ─── VM-3: Prometheus + Grafana ───────────────────────────────────────────────
-
-resource "azurerm_public_ip" "vm3" {
-  name                = "${var.project_name}-vm3-ip"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  allocation_method   = "Static"
-  sku                 = "Standard"
-}
+# ─── VM-3: Prometheus + Grafana (subnet-monitoring) ───────────────────────────
 
 resource "azurerm_network_interface" "vm3" {
   name                = "${var.project_name}-vm3-nic"
@@ -123,9 +98,9 @@ resource "azurerm_network_interface" "vm3" {
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = var.subnet_id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.vm3.id
+    subnet_id                     = var.subnet_monitoring_id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.2.4"
   }
 }
 

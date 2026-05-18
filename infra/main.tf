@@ -24,7 +24,7 @@ resource "azurerm_resource_group" "main" {
   location = var.location
 }
 
-# Network module - creates VNet, Subnet and NSG
+# Network module - creates VNet, 4 Subnets, NSG and Azure Bastion
 module "network" {
   source = "./modules/network"
 
@@ -33,15 +33,16 @@ module "network" {
   resource_group_name = azurerm_resource_group.main.name
 }
 
-# Compute module - creates 3 VMs with static public IPs
+# Compute module - creates 3 VMs without public IPs
 module "compute" {
   source = "./modules/compute"
 
-  project_name        = var.project_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-  subnet_id           = module.network.subnet_id
-  vm_size             = var.vm_size
-  admin_username      = var.admin_username
-  ssh_public_key_path = var.ssh_public_key_path
+  project_name         = var.project_name
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.main.name
+  subnet_app_id        = module.network.subnet_app_id
+  subnet_monitoring_id = module.network.subnet_monitoring_id
+  vm_size              = var.vm_size
+  admin_username       = var.admin_username
+  ssh_public_key_path  = var.ssh_public_key_path
 }

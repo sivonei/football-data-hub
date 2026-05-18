@@ -1,47 +1,66 @@
 # main.tf - Network resources for the Football Data Hub
-# Creates: VNet, Subnet, and NSG with security rules
+# Creates: VNet, 4 Subnets, NSG, Azure Bastion
 
-# Virtual Network - the private network where all VMs will live
+# Virtual Network
 resource "azurerm_virtual_network" "main" {
   name                = "${var.project_name}-vnet"
   location            = var.location
   resource_group_name = var.resource_group_name
-
-  # Address space for the entire VNet
-  # 10.0.0.0/16 gives us 65536 addresses to work with
-  address_space = ["10.0.0.0/16"]
+  address_space       = ["10.0.0.0/16"]
 }
 
-# Subnet - a segment inside the VNet where our VMs will be placed
-resource "azurerm_subnet" "main" {
-  name                 = "${var.project_name}-subnet"
+# Subnet for Azure Bastion - name is mandatory, minimum /26
+resource "azurerm_subnet" "bastion" {
+  name                 = "AzureBastionSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.main.name
-
-  # 10.0.1.0/24 gives us 256 addresses inside the VNet
-  address_prefixes = ["10.0.1.0/24"]
+  address_prefixes     = ["10.0.0.0/26"]
 }
 
-# Network Security Group - the firewall that controls traffic to the VMs
+# Subnet for API VMs (VM-1 and VM-2)
+resource "azurerm_subnet" "app" {
+  name                 = "subnet-app"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
+
+# Subnet for monitoring (VM-3: Prometheus + Grafana)
+resource "azurerm_subnet" "monitoring" {
+  name                 = "subnet-monitoring"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+# Subnet reserved for future management tools
+resource "azurerm_subnet" "management" {
+  name                 = "subnet-management"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.3.0/24"]
+}
+
+# NSG - firewall rules applied to app and monitoring subnets
 resource "azurerm_network_security_group" "main" {
   name                = "${var.project_name}-nsg"
   location            = var.location
   resource_group_name = var.resource_group_name
 
-  # Allow SSH only - used to access VMs for deployment and maintenance
+  # SSH only from Bastion subnet - never directly from internet
   security_rule {
-    name                       = "allow-ssh"
+    name                       = "allow-ssh-from-bastion"
     priority                   = 100
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "*"
+    source_address_prefix      = "10.0.0.0/26"
     destination_address_prefix = "*"
   }
 
-  # Allow HTTP traffic - for the API and frontend
+  # HTTP from Load Balancer
   security_rule {
     name                       = "allow-http"
     priority                   = 110
@@ -54,7 +73,7 @@ resource "azurerm_network_security_group" "main" {
     destination_address_prefix = "*"
   }
 
-  # Allow port 8000 - FastAPI runs on this port
+  # FastAPI port from Load Balancer
   security_rule {
     name                       = "allow-api"
     priority                   = 120
@@ -67,23 +86,51 @@ resource "azurerm_network_security_group" "main" {
     destination_address_prefix = "*"
   }
 
-  # Allow Grafana - monitoring dashboard runs on port 3000
+  # Grafana only from internal VNet - never from internet
   security_rule {
-    name                       = "allow-grafana"
+    name                       = "allow-grafana-internal"
     priority                   = 130
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "3000"
-    source_address_prefix      = "*"
+    source_address_prefix      = "10.0.0.0/16"
     destination_address_prefix = "*"
   }
 }
 
-# Associate the NSG with the Subnet
-# This applies the firewall rules to all VMs in the subnet
-resource "azurerm_subnet_network_security_group_association" "main" {
-  subnet_id                 = azurerm_subnet.main.id
+# Associate NSG with subnet-app
+resource "azurerm_subnet_network_security_group_association" "app" {
+  subnet_id                 = azurerm_subnet.app.id
   network_security_group_id = azurerm_network_security_group.main.id
+}
+
+# Associate NSG with subnet-monitoring
+resource "azurerm_subnet_network_security_group_association" "monitoring" {
+  subnet_id                 = azurerm_subnet.monitoring.id
+  network_security_group_id = azurerm_network_security_group.main.id
+}
+
+# Public IP for Azure Bastion - static required
+resource "azurerm_public_ip" "bastion" {
+  name                = "${var.project_name}-bastion-ip"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
+# Azure Bastion Host - secure access to VMs without public IPs
+resource "azurerm_bastion_host" "main" {
+  name                = "${var.project_name}-bastion"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = "Basic"
+
+  ip_configuration {
+    name                 = "configuration"
+    subnet_id            = azurerm_subnet.bastion.id
+    public_ip_address_id = azurerm_public_ip.bastion.id
+  }
 }

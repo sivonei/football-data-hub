@@ -15,8 +15,13 @@ variable "resource_group_name" {
   type        = string
 }
 
-variable "subnet_id" {
-  description = "ID of the subnet where VMs will be placed"
+variable "subnet_app_id" {
+  description = "ID of subnet-app where VM-1 and VM-2 will be placed"
+  type        = string
+}
+
+variable "subnet_monitoring_id" {
+  description = "ID of subnet-monitoring where VM-3 will be placed"
   type        = string
 }
 
