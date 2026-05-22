@@ -126,11 +126,49 @@ resource "azurerm_bastion_host" "main" {
   name                = "${var.project_name}-bastion"
   location            = var.location
   resource_group_name = var.resource_group_name
-  sku                 = "Basic"
+  sku                 = "Standard"
+  tunneling_enabled   = true
+  ip_connect_enabled  = true
 
   ip_configuration {
     name                 = "configuration"
     subnet_id            = azurerm_subnet.bastion.id
     public_ip_address_id = azurerm_public_ip.bastion.id
   }
+}
+
+# Public IP for NAT Gateway - used for outbound internet access from VMs
+resource "azurerm_public_ip" "nat" {
+  name                = "${var.project_name}-nat-ip"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
+# NAT Gateway - allows VMs without public IPs to access the internet for outbound traffic
+# VMs can download packages, Docker images, updates without being directly exposed
+resource "azurerm_nat_gateway" "main" {
+  name                = "${var.project_name}-nat"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku_name            = "Standard"
+}
+
+# Associate public IP with NAT Gateway
+resource "azurerm_nat_gateway_public_ip_association" "main" {
+  nat_gateway_id       = azurerm_nat_gateway.main.id
+  public_ip_address_id = azurerm_public_ip.nat.id
+}
+
+# Associate NAT Gateway with subnet-app (VM-1 and VM-2)
+resource "azurerm_subnet_nat_gateway_association" "app" {
+  subnet_id      = azurerm_subnet.app.id
+  nat_gateway_id = azurerm_nat_gateway.main.id
+}
+
+# Associate NAT Gateway with subnet-monitoring (VM-3)
+resource "azurerm_subnet_nat_gateway_association" "monitoring" {
+  subnet_id      = azurerm_subnet.monitoring.id
+  nat_gateway_id = azurerm_nat_gateway.main.id
 }
