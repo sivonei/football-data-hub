@@ -66,9 +66,11 @@ The script activates the Python virtual environment, runs tests, and starts the 
 
 **Environment variables required** (create `api/.env`):
 
+```bash
 FOOTBALL_API_KEY=your_key_here
 REDIS_HOST=localhost
 REDIS_PORT=6379
+```
 
 Get a free API key at [football-data.org/client/register](https://www.football-data.org/client/register).
 
@@ -136,7 +138,7 @@ In practice, infrastructure is destroyed after each session. Cost per 2-hour wor
 - **RTO:** 5 hours
 
 ## Project Structure
-
+```bash
 football-data-hub/
 ├── api/                    # FastAPI application
 │   ├── app/
@@ -155,6 +157,9 @@ football-data-hub/
 ├── frontend/               # Bootstrap HTML frontend
 ├── docs/                   # Architecture diagrams
 └── .github/workflows/      # CI/CD pipeline
+
+```
+
 
 ## CI/CD
 
