@@ -53,6 +53,8 @@ Data source: [Football-Data.org](https://www.football-data.org) (free tier, 10 r
 
 ## Running Locally
 
+For local development and testing without Azure infrastructure.
+
 ```bash
 # Clone the repository
 git clone https://github.com/sivonei/football-data-hub.git
@@ -62,7 +64,8 @@ cd football-data-hub
 ./dev.sh
 ```
 
-The script activates the Python virtual environment, runs tests, and starts the API server. Access the Swagger documentation at `http://localhost:8000/docs`.
+The script activates the Python virtual environment, runs tests, and starts the API server.
+Access the Swagger documentation at `http://localhost:8000/docs`.
 
 **Environment variables required** (create `api/.env`):
 
@@ -74,22 +77,27 @@ REDIS_PORT=6379
 
 Get a free API key at [football-data.org/client/register](https://www.football-data.org/client/register).
 
-## Infrastructure
+## Running on Azure
 
-All infrastructure is provisioned with Terraform and designed to be ephemeral:
+For full infrastructure deployment on Azure with Terraform.
+
+**Prerequisites:**
+- Azure CLI installed and logged in (`az login`)
+- Terraform 1.5+ installed
+- SSH key pair available at `~/.ssh/eve`
+
+**1. Provision infrastructure:**
 
 ```bash
 cd infra
-
-# Create all resources
 terraform init
 terraform apply
-
-# Destroy when done (avoids unnecessary costs)
-terraform destroy
 ```
 
-**Connect to VMs via Azure Bastion:**
+Terraform will output the Bastion IP and SSH commands for each VM.
+
+**2. Connect to VMs via Azure Bastion:**
+
 ```bash
 az network bastion ssh \
   --name football-data-hub-bastion \
@@ -100,11 +108,31 @@ az network bastion ssh \
   --ssh-key ~/.ssh/eve
 ```
 
-**Access Grafana via SSH tunnel:**
+**3. Deploy the application on each VM:**
+
+```bash
+# On VM-1 and VM-2
+docker-compose -f docker/vm1-compose.yml up -d
+
+# On VM-3
+docker-compose -f docker/vm3-compose.yml up -d
+```
+
+**4. Access Grafana via SSH tunnel:**
+
 ```bash
 ssh -L 3000:10.0.2.4:3000 azureuser@<bastion-ip> -i ~/.ssh/eve
 # Then open http://localhost:3000
 ```
+
+**5. Destroy infrastructure when done:**
+
+```bash
+terraform destroy
+```
+
+Cost per 2-hour working session is approximately €1-2.
+
 
 ## Security Model
 
