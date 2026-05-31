@@ -2,13 +2,13 @@
 # This file initializes the FastAPI application and registers the routes
 
 # Load environment variables from .env file
-# This only applies in development, in production variables are set directly on the VM
-from fastapi.middleware.cors import CORSMiddleware
-from app.routes import espanha, uk
-from fastapi import FastAPI
+# Must be called before any other imports that use environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.routes import espanha, uk
 
 # Create the FastAPI application instance
 # title and description appear in the automatic Swagger documentation
@@ -26,7 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Register the routes
 # Each router groups related endpoints under a specific prefix
 app.include_router(espanha.router, prefix="/liga-espanha", tags=["Spain"])
@@ -34,8 +33,6 @@ app.include_router(uk.router, prefix="/liga-uk", tags=["UK"])
 
 # Health check endpoint
 # Used by the Azure Load Balancer to verify if the application is running
-
-
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}

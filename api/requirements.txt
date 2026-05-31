@@ -15,3 +15,6 @@ pytest==8.2.0
 
 # Required to test async functions with pytest
 pytest-asyncio==0.23.6
+
+# Loads environment variables from .env file in development
+python-dotenv==1.0.1

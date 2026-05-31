@@ -9,13 +9,13 @@ variable "project_name" {
 variable "location" {
   description = "Azure region where resources will be created"
   type        = string
-  default     = "West Europe"
+  default     = "spaincentral"
 }
 
 variable "vm_size" {
-  description = "Size of the Azure VMs - B1s is the cheapest option"
+  description = "Size of the Azure VMs"
   type        = string
-  default     = "Standard_B1s"
+  default     = "Standard_D2s_v3"
 }
 
 variable "admin_username" {
@@ -27,5 +27,5 @@ variable "admin_username" {
 variable "ssh_public_key_path" {
   description = "Path to the SSH public key used to access the VMs"
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
+  default     = "~/.ssh/eve.pub"
 }
